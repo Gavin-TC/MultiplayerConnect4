@@ -94,11 +94,15 @@ int main(void) {
 
 				printf("Client 1's turn...\n");
 				spot = handleClient(clientSocket, spot);
+				if (spot == -1) {
+					serverRunning = false;
+					break;
+				}
 				printf("Spot now: %d\n", spot);
 
-				// Place piece on server side board
-				placePiece(board, spot, 1);
-				sendMessage(spot, client2Socket, "Client 2");
+				
+				placePiece(board, spot, 1); // Place piece on server side board
+				sendMessage(spot, client2Socket, "Client 2"); // Tell client to replicate opponent move
 				gameState = TURN_2;
 				break;
 
@@ -111,6 +115,10 @@ int main(void) {
 
 				printf("[INFO] Client 2's turn...\n");
 				spot = handleClient(client2Socket, spot);
+				if (spot == -1) {
+					serverRunning = false;
+					break;
+				}
 
 				placePiece(board, spot, 2); // Place piece on server side board
 				sendMessage(spot, clientSocket, "Client 1"); // Tell client to replicate opponent move
