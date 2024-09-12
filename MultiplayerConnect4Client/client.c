@@ -73,12 +73,6 @@ int main(void) {
 				printf("[ERROR] Error when trying to send spot (%s): %d\n", spotstr, WSAGetLastError());
 			}
 		} else {
-			printf("Waiting for opponent to make turn...\n");
-			printf("[DEBUG] Waiting for my turn...\n");
-			if (receiveSpecificMessage(&clientSocket, "yourTurn") == 0) {
-				isMyTurn = true;
-			}
-
 			if (!isFirstTurn) {
 				char* message = receiveAnyMessage(&clientSocket);
 				int opponentSpot = atoi(message);
@@ -91,8 +85,13 @@ int main(void) {
 					printf("[DEBUG] Opponent placed piece at %d.\n", opponentSpot);
 				}
 			}
+
+			printf("Waiting for opponent to make turn...\n");
+			printf("[DEBUG] Waiting for my turn...\n");
+			if (receiveSpecificMessage(&clientSocket, "yourTurn") == 0) {
+				isMyTurn = true;
+			}
 		}
-		printBoard(board);
 	}
 	system("PAUSE");
 	closesocket(clientSocket);
