@@ -76,24 +76,32 @@ int main(void) {
 			if (!isFirstTurn) {
 				char* message = receiveAnyMessage(&clientSocket);
 				int opponentSpot = atoi(message);
-				printf("[DEBUG] Received opponents turn!\n");
+				//printf("[DEBUG] Received opponents turn!\n");
 				if (playerID == 1) {
 					placePiece(board, opponentSpot, 2);
-					printf("[DEBUG] Opponent placed piece at %d.\n", opponentSpot);
+					//printf("[DEBUG] Opponent placed piece at %d.\n", opponentSpot);
 				} else {
 					placePiece(board, opponentSpot, 1);
-					printf("[DEBUG] Opponent placed piece at %d.\n", opponentSpot);
+					//printf("[DEBUG] Opponent placed piece at %d.\n", opponentSpot);
 				}
 			}
 
 			printf("Waiting for opponent to make turn...\n");
-			printf("[DEBUG] Waiting for my turn...\n");
-			if (receiveSpecificMessage(&clientSocket, "yourTurn") == 0) {
+			//printf("[DEBUG] Waiting for my turn...\n");
+			int result = receiveSpecificMessage(&clientSocket, "yourTurn");
+			if (result == 0) {
 				isMyTurn = true;
+			} else if (result == 2) {
+				clientRunning = false;
 			}
 		}
 	}
-	system("PAUSE");
+	printf("Game ended!\n");
+	if (checkWin(board, playerID) == 1) {
+		printf("You won!\n");
+	} else {
+		printf("You lost!\n");
+	}
 	closesocket(clientSocket);
 
 	return 0;
@@ -123,12 +131,12 @@ int connectToServer(SOCKET* clientSocket, struct sockaddr_in* serverAddr) {
 		return 1;
 	}
 
-	printf("[DEBUG] Successfully connected to the server!\n");
+	//printf("[DEBUG] Successfully connected to the server!\n");
 	return 0;
 }
 
 int receiveSpecificMessage(SOCKET* clientSocket, char* message) {
-	printf("[DEBUG] Attempting to receive message [%s]...\n", message);
+	//printf("[DEBUG] Attempting to receive message [%s]...\n", message);
 
 	char buffer[1024];
 	int messageBytes = recv(*clientSocket, buffer, sizeof(buffer), 0);
@@ -140,21 +148,25 @@ int receiveSpecificMessage(SOCKET* clientSocket, char* message) {
 	buffer[messageBytes] = '\0';
 
 	if (strcmp(buffer, message) == 0) {
-		printf("[DEBUG] Successfully received message [%s]!\n", message);
+		//printf("[DEBUG] Successfully received message [%s]!\n", message);
 		return 0;
 	}
-	printf("[DEBUG] Received message [%s] did not match expected message [%s]!: %d\n", buffer, message, WSAGetLastError());
+	else if (strcmp(buffer, "end")) {
+		//printf("[DEBUG] Game ended!");
+		return 2;
+	}
+	//printf("[DEBUG] Received message [%s] did not match expected message [%s]!: %d\n", buffer, message, WSAGetLastError());
 	return 1;
 }
 
 char* receiveAnyMessage(SOCKET* clientSocket) {
-	printf("[DEBUG] Listening for any message...\n");
+	//printf("[DEBUG] Listening for any message...\n");
 
 	char buffer[1024];
 	int messageBytes = recv(*clientSocket, buffer, sizeof(buffer), 0);
 	buffer[messageBytes] = '\0';
 
-	printf("[DEBUG] Received message [%s]!\n", buffer);
+	//printf("[DEBUG] Received message [%s]!\n", buffer);
 
 	return buffer;
 }
