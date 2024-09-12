@@ -47,7 +47,7 @@ int main(void) {
 	}
 
 	bool isMyTurn = false;
-	bool isFirstTurn = !playerID - 1;
+	bool isFirstTurn = !(playerID - 1);
 
 	while (clientRunning) {
 		printBoard(board);
