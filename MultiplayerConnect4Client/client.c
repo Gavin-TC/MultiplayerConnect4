@@ -79,7 +79,7 @@ int main(void) {
 int connectToServer(SOCKET* clientSocket, struct sockaddr_in* serverAddr) {
 	WSADATA wsaData;
 
-	// Initialize Winsock
+	// Initialize WinSock2
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
 		printf("WSAStartup failed: %d\n", WSAGetLastError());
 		return 1;

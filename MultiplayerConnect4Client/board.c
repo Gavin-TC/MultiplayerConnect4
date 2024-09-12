@@ -20,12 +20,6 @@ int** getNewBoard() {
 			board[y][x] = 0;
 		}
 	}
-	// Debug print to verify initialization
-	for (int y = 0; y < HEIGHT; y++) {
-		for (int x = 0; x < WIDTH; x++) {
-			printf("board[%d][%d] = %d\n", y, x, board[y][x]);
-		}
-	}
 
 	return board;
 }
@@ -69,7 +63,6 @@ int checkWin(int** board, int playerID) {
 	// Iterate over the board
 	for (int y = 0; y < HEIGHT; y++) {
 		for (int x = 0; x < WIDTH; x++) {
-			printf("num: %d\n", board[y][x]);
 			// Check horizontal (to the right)
 			if (x <= WIDTH - 4) {
 				if (board[y][x] == playerID &&
