@@ -47,8 +47,10 @@ int main(void) {
 	}
 
 	bool isMyTurn = false;
+	bool isFirstTurn = true;
 
 	while (clientRunning) {
+		printBoard(board);
 		if (isMyTurn) {
 			int spot = NULL;
 			char spotstr[32];
@@ -56,7 +58,6 @@ int main(void) {
 			while (spot == NULL || placePiece(board, spot, playerID)) {
 				spot = -1;
 				printf("\n\n");
-				printBoard(board);
 
 				printf("Your turn!\n");
 				printf("Pick a column: ");
@@ -66,23 +67,32 @@ int main(void) {
 			}
 
 			isMyTurn = false;
+			isFirstTurn = false;
+			
 			if (send(clientSocket, spotstr, strlen(spotstr), 0) == SOCKET_ERROR) {
 				printf("[ERROR] Error when trying to send spot (%s): %d\n", spotstr, WSAGetLastError());
 			}
 		} else {
 			printf("Waiting for opponent to make turn...\n");
-			char* message = receiveAnyMessage(&clientSocket);
-			int opponentSpot = atoi(message);
-			if (playerID == 1) {
-				placePiece(board, opponentSpot, 2);
-			} else {
-				placePiece(board, opponentSpot, 1);
-			}
-			
+			printf("[DEBUG] Waiting for my turn...\n");
 			if (receiveSpecificMessage(&clientSocket, "yourTurn") == 0) {
 				isMyTurn = true;
 			}
+
+			if (!isFirstTurn) {
+				char* message = receiveAnyMessage(&clientSocket);
+				int opponentSpot = atoi(message);
+				printf("[DEBUG] Received opponents turn!\n");
+				if (playerID == 1) {
+					placePiece(board, opponentSpot, 2);
+					printf("[DEBUG] Opponent placed piece at %d.\n", opponentSpot);
+				} else {
+					placePiece(board, opponentSpot, 1);
+					printf("[DEBUG] Opponent placed piece at %d.\n", opponentSpot);
+				}
+			}
 		}
+		printBoard(board);
 	}
 	system("PAUSE");
 	closesocket(clientSocket);
