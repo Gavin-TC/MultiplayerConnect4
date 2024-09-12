@@ -71,7 +71,7 @@ int main(void) {
 			}
 		} else {
 			printf("Waiting for opponent to make turn...\n");
-			char* message = receiveAnyMessage(clientSocket);
+			char* message = receiveAnyMessage(&clientSocket);
 			int opponentSpot = atoi(message);
 			if (playerID == 1) {
 				placePiece(board, opponentSpot, 2);
