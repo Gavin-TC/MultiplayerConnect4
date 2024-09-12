@@ -14,6 +14,12 @@ SOCKET acceptClient(SOCKET serverSocket, const char* clientName);
 void serverCleanup(SOCKET* serverSocket, SOCKET* clientSocket, SOCKET* client2Socket);
 int sendMessage(char* message, SOCKET* clientSocket, const char* clientName);
 
+enum MESSAGE_TYPE {
+	ERR,
+	INFO,
+	DEBUG
+};
+
 int main(void) {
 	WSADATA wsaData;
 	SOCKET serverSocket;
@@ -30,19 +36,19 @@ int main(void) {
 
 	clientSocket = acceptClient(serverSocket, "Client 1");
 	if (clientSocket == INVALID_SOCKET) {
-		printf("Error accepting client 1: %d\n", WSAGetLastError());
+		printf("[ERROR] Error accepting client 1: %d\n", WSAGetLastError());
 		serverCleanup(&serverSocket, &clientSocket, &client2Socket);
 		return 1;
 	}
-	printf("Client 1 connected!\n");
+	printf("[INFO] Client 1 connected!\n");
 
 	client2Socket = acceptClient(serverSocket, "Client 2");
 	if (client2Socket == INVALID_SOCKET) {
-		printf("Error accepting client 2: %d\n", WSAGetLastError());
+		printf("[ERROR] Error accepting client 2: %d\n", WSAGetLastError());
 		serverCleanup(&serverSocket, &clientSocket, &client2Socket);
 		return 1;
 	}
-	printf("Client 2 connected!\n");
+	printf("[INFO] Client 2 connected!\n");
 
 	enum GAMESTATE {
 		TURN_1,				// Client 1's turn
@@ -54,7 +60,7 @@ int main(void) {
 	bool serverRunning = true;
 	int wonPlayerID = 0;
 
-	printf("Sending start message to clients...\n");
+	printf("[INFO] Sending start message to clients...\n");
 
 	sendMessage("1", clientSocket, "Client 1");
 	sendMessage("2",  client2Socket, "Client 2");
@@ -66,12 +72,12 @@ int main(void) {
 	if (serverRunning) {
 		board = getNewBoard();
 		if (board == NULL) {
-			printf("Error creating board! Shutting down server!\n");
+			printf("[ERROR] Error creating board! Shutting down server!\n");
 			serverRunning = false;
 			return 1;
 		}
 		else {
-			printf("Board creation successful!\n");
+			printf("[INFO] Board creation successful!\n");
 		}
 	}
 
@@ -92,6 +98,7 @@ int main(void) {
 
 				// Place piece on server side board
 				placePiece(board, spot, 1);
+				sendMessage(spot, client2Socket, "Client 2");
 				gameState = TURN_2;
 				break;
 
@@ -102,37 +109,42 @@ int main(void) {
 				}
 				sendMessage("yourTurn", client2Socket, "Client 2");
 
-				printf("Client 2's turn...\n");
+				printf("[INFO] Client 2's turn...\n");
 				spot = handleClient(client2Socket, spot);
-				printf("Spot now: %d\n", spot);
 
-				// Place piece on server side board
-				placePiece(board, spot, 2);
+				placePiece(board, spot, 2); // Place piece on server side board
+				sendMessage(spot, clientSocket, "Client 1"); // Tell client to replicate opponent move
+
 				gameState = TURN_1;
 				break;
 
 			case END_GAME:
-				printf("Game ended!");
+				printf("[INFO] Game ended!");
+
+				sendMessage("stop", clientSocket, "Client 1");
+				sendMessage("stop", client2Socket, "Client 2");
+
 				serverRunning = false;
 				break;
 		}
 		printBoard(board);
 		if (wonPlayerID == 0) {
 			if (checkWin(board, 1) == 1) {
-				printf("Player 1 won!\n");
+				printf("[INFO] Player 1 won!\n");
 				gameState = END_GAME;
 			} else if (checkWin(board, 2) == 1) {
-				printf("Player 2 won!\n");
+				printf("[INFO] Player 2 won!\n");
 				gameState = END_GAME;
 			}
 		}
 	}
+	printf("[INFO] Shutting down server...\n");
+	system("PAUSE");
+
 	if (board) {
 		freeBoard(board);
 	}
 	serverCleanup(&serverSocket, &clientSocket, &client2Socket);
-
-	system("PAUSE");
 
 	return 0;
 }
@@ -147,64 +159,64 @@ int initializeServer(SOCKET* serverSocket, struct sockaddr_in* serverAddr) {
 
 	*serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (*serverSocket == INVALID_SOCKET) {
-		printf("Error binding server socket: %d\n", WSAGetLastError());
+		printf("[ERROR] Error binding server socket: %d\n", WSAGetLastError());
 		closesocket(*serverSocket);
 		WSACleanup();
 		return 1;
 	}
 
-	printf("Binding server socket...\n");
+	printf("[INFO] Binding server socket...\n");
 	if (bind(*serverSocket, (struct sockaddr*)serverAddr, sizeof(*serverAddr)) != 0) {
-		printf("Error binding server socket: %d\n", WSAGetLastError());
+		printf("[ERROR] Error binding server socket: %d\n", WSAGetLastError());
 		closesocket(*serverSocket);
 		WSACleanup();
 		return 1;
 	}
 
-	printf("Server socket listening on port 6006...\n");
+	printf("[INFO] Server socket listening on port 6006...\n");
 	if (listen(*serverSocket, 5) == SOCKET_ERROR) {
-		printf("Error listening: %d\n", WSAGetLastError());
+		printf("[ERROR] Error listening: %d\n", WSAGetLastError());
 		closesocket(*serverSocket);
 		WSACleanup();
 		return 1;
 	}
-	printf("Server successfully initialized!\n");
+	printf("[INFO] Server successfully initialized!\n");
 	return 0;
 }
 
 int handleClient(SOCKET* clientSocket, int spot) {
 	char buffer[1024];
-	printf("Receiving from client...\n");
+	printf("[INFO] Receiving from client...\n");
 	int result = recv(clientSocket, buffer, sizeof(buffer), 0);
 
 	if (result == 0 || clientSocket == INVALID_SOCKET) {
-		printf("Client disconnected...\n\n");
+		printf("[INFO] Client disconnected...\n\n");
 		closesocket(clientSocket);
 		clientSocket = INVALID_SOCKET;
 		return -1;
 	}
 	else if (result == SOCKET_ERROR) {
-		printf("Error receiving data: %d\n\n", WSAGetLastError());
+		printf("[ERROR] Error receiving data: %d\n\n", WSAGetLastError());
 		closesocket(clientSocket);
 		clientSocket = INVALID_SOCKET;
 		return -1;
 	}
 	else {
 		buffer[result] = '\0';
-		printf("Received data: %s\n\n", buffer);
+		printf("[INFO] Received data: %s\n\n", buffer);
 		return buffer[0] - '0';
 	}
 	return -1;
 }
 
 SOCKET acceptClient(SOCKET serverSocket, const char* clientName) {
-	printf("Waiting for %s...\n", clientName);
+	printf("[INFO] Waiting for %s...\n", clientName);
 	SOCKET clientSocket = accept(serverSocket, NULL, NULL);
 	if (clientSocket == INVALID_SOCKET) {
-		printf("Error accepting %s: %d\n\n", clientName, WSAGetLastError());
+		printf("[ERROR] Error accepting %s: %d\n\n", clientName, WSAGetLastError());
 	}
 	else {
-		printf("%s connected!\n\n", clientName);
+		printf("[INFO] %s connected!\n\n", clientName);
 	}
 	return clientSocket;
 }
@@ -217,11 +229,11 @@ void serverCleanup(SOCKET* serverSocket, SOCKET* clientSocket, SOCKET* client2So
 }
 
 int sendMessage(char* message, SOCKET* clientSocket, const char* clientName) {
-	printf("Sending message [%s] to %s...\n", message, clientName);
+	printf("[INFO] Sending message [%s] to %s...\n", message, clientName);
 	if (send(clientSocket, message, strlen(message), 0) == SOCKET_ERROR) {
-		printf("Error sending message [%s] to %s: %d\n", message, clientName, WSAGetLastError());
+		printf("[ERROR] Error sending message [%s] to %s: %d\n", message, clientName, WSAGetLastError());
 		return 1;
 	}
-	printf("Successfully sent message [%s] to %s!\n\n", message, clientName);
+	printf("[INFO] Successfully sent message [%s] to %s!\n\n", message, clientName);
 	return 0;
 }
